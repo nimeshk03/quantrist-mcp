@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration.test.ts",
+    "backtest": "npx tsx scripts/backtest.ts",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
@@ -26,12 +27,14 @@
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241205.0",
+    "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
     "@vitest/coverage-v8": "^4.0.15",
     "esbuild": "^0.27.1",
     "eslint": "^9.16.0",
     "prettier": "^3.4.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vitest": "^4.0.15",
     "wrangler": "^4.53.0"

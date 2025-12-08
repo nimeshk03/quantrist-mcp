@@ -171,7 +171,7 @@ npm run build
 
 ## Testing
 
-The project includes a comprehensive test suite with 271 tests covering all components.
+The project includes a comprehensive test suite with 289 tests covering all components.
 
 ```bash
 # Run all tests
@@ -214,6 +214,35 @@ npm run test:integration
 | `stress-test.test.ts` | 30 | Stress test tool |
 | `correlation.test.ts` | 32 | Correlation regime tool |
 | `integration.test.ts` | 26 | End-to-end MCP protocol tests |
+| `backtest.test.ts` | 18 | VaR backtesting validation |
+
+### VaR Backtesting
+
+Run the VaR backtest to validate model accuracy:
+
+```bash
+npm run backtest
+```
+
+The backtest compares predicted VaR to actual returns over 100 periods:
+- **95% VaR**: Expected ~5% violations
+- **99% VaR**: Expected ~1% violations
+
+Output example:
+```
+VaR Backtest Results
+====================
+
+95% VaR:
+  Violations: 5/100 (5.0%)
+  Expected: 5.0%
+  Status: [OK] PASS
+
+99% VaR:
+  Violations: 1/100 (1.0%)
+  Expected: 1.0%
+  Status: [OK] PASS
+```
 
 ## License
 
