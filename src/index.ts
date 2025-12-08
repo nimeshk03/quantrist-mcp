@@ -6,57 +6,50 @@
  */
 
 import { Env } from './types';
+import { MCPServer } from './mcp/server';
 
+/**
+ * Create and configure the MCP server
+ */
+const mcpServer = new MCPServer({
+  name: 'quantrisk-mcp',
+  version: '1.0.0',
+  tools: [
+    // Echo tool for testing MCP protocol
+    {
+      name: 'echo',
+      description: 'Echo back the input for testing. Returns the input message.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+            description: 'Message to echo back',
+          },
+        },
+        required: ['message'],
+      },
+      handler: async (input) => {
+        const { message } = input as { message?: string };
+        if (!message) {
+          return { error: 'Missing required parameter: message' };
+        }
+        return {
+          result: {
+            echo: message,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      },
+    },
+  ],
+});
+
+/**
+ * Cloudflare Workers entry point
+ */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Placeholder - will be replaced with MCPServer in Milestone 1.2
-    const url = new URL(request.url);
-
-    // Health check endpoint
-    if (url.pathname === '/health') {
-      return new Response(
-        JSON.stringify({
-          status: 'healthy',
-          version: '1.0.0',
-          tools: [],
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-        }
-      );
-    }
-
-    // CORS preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
-    }
-
-    // Default response for MCP endpoint
-    return new Response(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        id: null,
-        error: {
-          code: -32601,
-          message: 'MCP server not yet implemented. See Milestone 1.2.',
-        },
-      }),
-      {
-        status: 501,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
+    return mcpServer.handleRequest(request, env);
   },
 };
