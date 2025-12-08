@@ -169,6 +169,48 @@ npm run lint
 npm run build
 ```
 
+## Testing
+
+The project includes a comprehensive test suite with 245+ tests covering all components.
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Coverage
+
+| Component | Coverage |
+|-----------|----------|
+| Statistics | 100% |
+| Monte Carlo Engine | 99% |
+| MCP Server | 94% |
+| Returns Service | 93% |
+| Portfolio Risk Tool | 92% |
+| Ticker Risk Tool | 92% |
+| Stress Test Tool | 94% |
+| Correlation Tool | 87% |
+| **Overall** | **94%** |
+
+### Test Files
+
+| File | Tests | Description |
+|------|-------|-------------|
+| `statistics.test.ts` | 55 | Statistical utilities |
+| `monte-carlo.test.ts` | 24 | Simulation engine |
+| `mcp-server.test.ts` | 17 | MCP protocol handling |
+| `returns-service.test.ts` | 34 | Data fetching and caching |
+| `portfolio-risk.test.ts` | 26 | Portfolio risk tool |
+| `ticker-risk.test.ts` | 27 | Ticker risk tool |
+| `stress-test.test.ts` | 30 | Stress test tool |
+| `correlation.test.ts` | 32 | Correlation regime tool |
+
 ## License
 
 MIT
