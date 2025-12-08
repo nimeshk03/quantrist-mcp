@@ -27,6 +27,34 @@ npm test
 npm run deploy
 ```
 
+## Add to Your AI Tools
+
+### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "quantrisk": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://quantrisk-mcp.quant-risk-mcp.workers.dev"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop, then ask: *"Analyze the risk of a portfolio with 60% SPY and 40% TLT"*
+
+### Cursor / Windsurf
+
+See [Integration Guide](docs/API.md#integration-with-ai-tools) for configuration details.
+
+## Documentation
+
+- **[API Reference](docs/API.md)** - Complete API documentation with schemas, examples, and error codes
+- **[Integration Guide](docs/API.md#integration-with-ai-tools)** - How to add to Claude, Cursor, Windsurf, and other MCP clients
+
 ## API Endpoints
 
 ### Health Check
@@ -151,6 +179,13 @@ quantrisk-mcp/
 │   ├── services/          # Data fetching services
 │   └── utils/             # Statistics utilities
 ├── tests/                 # Test files
+├── scripts/               # Utility scripts
+│   ├── backtest.ts        # VaR backtesting
+│   ├── verify-local.ts    # Local dev verification
+│   ├── verify-deployment.ts # Deployment verification
+│   └── validate-production.ts # Production validation
+├── docs/
+│   └── API.md             # Complete API documentation
 ├── wrangler.toml          # Cloudflare Workers config
 ├── package.json
 └── tsconfig.json
