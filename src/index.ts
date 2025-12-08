@@ -19,6 +19,10 @@ import {
   stressTestToolDefinition,
   stressTestHandler,
 } from './tools/stress_test';
+import {
+  correlationRegimeToolDefinition,
+  correlationRegimeHandler,
+} from './tools/correlation';
 
 /**
  * Create and configure the MCP server
@@ -43,6 +47,12 @@ const mcpServer = new MCPServer({
     {
       ...stressTestToolDefinition,
       handler: stressTestHandler,
+    },
+
+    // Correlation Regime Tool - Correlation dynamics
+    {
+      ...correlationRegimeToolDefinition,
+      handler: correlationRegimeHandler,
     },
 
     // Echo tool for testing MCP protocol

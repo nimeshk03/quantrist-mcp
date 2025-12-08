@@ -40,8 +40,15 @@ curl http://localhost:8787/health
 curl -X POST http://localhost:8787 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
 
-# Call a tool
+## Available Tools
+
+### 1. portfolio_risk
+
+Calculate comprehensive risk metrics for a portfolio.
+
+```bash
 curl -X POST http://localhost:8787 \
   -H "Content-Type: application/json" \
   -d '{
@@ -50,10 +57,86 @@ curl -X POST http://localhost:8787 \
     "method":"tools/call",
     "params":{
       "name":"portfolio_risk",
-      "arguments":{"allocations":{"SPY":0.6,"TLT":0.4}}
+      "arguments":{
+        "holdings":{"SPY":0.6,"TLT":0.3,"GLD":0.1},
+        "simulations":10000,
+        "horizon":21
+      }
     }
   }'
 ```
+
+**Returns**: VaR (95%, 99%), CVaR, volatility, Sharpe ratio, and risk decision (PROCEED/REDUCE/VETO).
+
+### 2. ticker_risk
+
+Analyze the risk impact of adding a single ticker to a portfolio.
+
+```bash
+curl -X POST http://localhost:8787 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"tools/call",
+    "params":{
+      "name":"ticker_risk",
+      "arguments":{
+        "ticker":"NVDA",
+        "proposedAllocation":0.20,
+        "existingHoldings":{"SPY":0.6,"TLT":0.4}
+      }
+    }
+  }'
+```
+
+**Returns**: Marginal VaR, VaR contribution, beta, correlation impact, and recommended allocation.
+
+### 3. stress_test
+
+Simulate portfolio performance under historical crisis scenarios.
+
+```bash
+curl -X POST http://localhost:8787 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"tools/call",
+    "params":{
+      "name":"stress_test",
+      "arguments":{
+        "holdings":{"AAPL":0.25,"JPM":0.25,"GLD":0.25,"TLT":0.25}
+      }
+    }
+  }'
+```
+
+**Scenarios**: GFC 2008, COVID 2020, Flash Crash 2010, Rate Shock 2022.
+
+**Returns**: Drawdown per scenario, worst/best performers, recovery time estimates.
+
+### 4. correlation_regime
+
+Analyze correlation dynamics to detect regime changes.
+
+```bash
+curl -X POST http://localhost:8787 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"tools/call",
+    "params":{
+      "name":"correlation_regime",
+      "arguments":{
+        "tickers":["SPY","TLT","GLD","QQQ"]
+      }
+    }
+  }'
+```
+
+**Returns**: Current regime (normal/elevated/crisis), correlation matrices, high/low correlation pairs, regime change probability.
 
 ## Project Structure
 
