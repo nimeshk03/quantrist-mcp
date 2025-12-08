@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration.test.ts",
     "backtest": "npx tsx scripts/backtest.ts",
+    "verify": "npx tsx scripts/verify-local.ts",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },

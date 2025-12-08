@@ -216,6 +216,37 @@ npm run test:integration
 | `integration.test.ts` | 26 | End-to-end MCP protocol tests |
 | `backtest.test.ts` | 18 | VaR backtesting validation |
 
+### Local Development Verification
+
+Verify the local dev server is working correctly:
+
+```bash
+# Start the dev server
+npm run dev
+
+# In another terminal, run verification
+npm run verify
+```
+
+Output example:
+```
+Local Development Verification
+==============================
+Server URL: http://localhost:8787
+
+Testing Health... [OK] Server is healthy
+Testing Initialize... [OK] Protocol version: 2024-11-05
+Testing Tools List... [OK] Found 5 tools
+Testing Portfolio Risk... [OK] VaR95: 0.67%, Latency: 11ms
+Testing Ticker Risk... [OK] Analyzed NVDA, Decision: REDUCE
+Testing Stress Test... [OK] Tested 4 scenario(s)
+Testing Correlation Regime... [OK] Regime: normal
+Testing CORS... [OK] CORS headers present
+Testing Error Handling... [OK] Correctly returns error
+
+Overall: PASS
+```
+
 ### VaR Backtesting
 
 Run the VaR backtest to validate model accuracy:
