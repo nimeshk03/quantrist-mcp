@@ -50,6 +50,16 @@ Restart Claude Desktop, then ask: *"Analyze the risk of a portfolio with 60% SPY
 
 See [Integration Guide](docs/API.md#integration-with-ai-tools) for configuration details.
 
+### Python / LangGraph
+
+```bash
+cd examples
+pip install -r requirements.txt
+python langgraph_integration.py
+```
+
+See [Python Integration Guide](docs/API.md#python--langgraph-integration) for LangGraph agent setup.
+
 ## Documentation
 
 - **[API Reference](docs/API.md)** - Complete API documentation with schemas, examples, and error codes
@@ -186,6 +196,9 @@ quantrisk-mcp/
 │   └── validate-production.ts # Production validation
 ├── docs/
 │   └── API.md             # Complete API documentation
+├── examples/
+│   ├── langgraph_integration.py  # Python/LangGraph integration
+│   └── requirements.txt   # Python dependencies
 ├── wrangler.toml          # Cloudflare Workers config
 ├── package.json
 └── tsconfig.json

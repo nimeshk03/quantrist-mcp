@@ -1,0 +1,12 @@
+# QuantRisk MCP Python Integration Requirements
+
+# Core HTTP client (required)
+httpx>=0.25.0
+
+# LangGraph integration (optional)
+langgraph>=0.0.40
+langchain-core>=0.1.0
+langchain-openai>=0.0.5
+
+# For testing
+pytest>=7.0.0

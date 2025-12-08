@@ -9,6 +9,7 @@ Complete API reference for the QuantRisk MCP Server.
   - [Claude Desktop](#claude-desktop)
   - [Cursor](#cursor)
   - [Other MCP Clients](#other-mcp-clients)
+- [Python / LangGraph Integration](#python--langgraph-integration)
 - [Authentication](#authentication)
 - [Endpoints](#endpoints)
 - [Tools](#tools)
@@ -157,6 +158,137 @@ npm run deploy
 ```
 
 Then update your MCP configuration to point to your instance.
+
+---
+
+## Python / LangGraph Integration
+
+For Python applications and LangGraph agents, use the provided integration module.
+
+### Installation
+
+```bash
+cd examples
+pip install -r requirements.txt
+```
+
+### Quick Start
+
+```python
+from langgraph_integration import (
+    portfolio_risk,
+    ticker_risk,
+    stress_test,
+    correlation_regime,
+)
+
+# Analyze portfolio risk
+result = portfolio_risk({"SPY": 0.6, "TLT": 0.3, "GLD": 0.1})
+print(f"VaR 95%: {result['metrics']['var95'] * 100:.2f}%")
+print(f"Decision: {result['decision']}")
+
+# Check ticker risk
+result = ticker_risk("NVDA", 0.15, {"SPY": 0.6, "TLT": 0.4})
+print(f"VaR Contribution: {result['varContribution'] * 100:.1f}%")
+
+# Run stress test
+result = stress_test({"SPY": 0.5, "TLT": 0.3, "GLD": 0.2})
+print(f"Worst Scenario: {result['worstScenario']['name']}")
+
+# Check correlation regime
+result = correlation_regime(["SPY", "TLT", "GLD", "QQQ"])
+print(f"Regime: {result['currentRegime']}")
+```
+
+### LangGraph Agent
+
+Create an AI agent with risk analysis capabilities:
+
+```python
+import os
+from langgraph_integration import create_risk_agent
+
+# Set your OpenAI API key
+os.environ["OPENAI_API_KEY"] = "your-api-key"
+
+# Create the agent
+agent = create_risk_agent()
+
+# Query the agent
+result = agent.invoke({
+    "messages": [("user", "Analyze the risk of a portfolio with 60% SPY and 40% TLT")]
+})
+
+print(result["messages"][-1].content)
+```
+
+### Direct MCP Client
+
+Use the MCP client directly for full control:
+
+```python
+from langgraph_integration import QuantRiskMCPClient
+
+client = QuantRiskMCPClient()
+
+# Initialize session
+client.initialize()
+
+# List available tools
+tools = client.list_tools()
+for tool in tools:
+    print(f"- {tool['name']}")
+
+# Call a tool
+result = client.call_tool("portfolio_risk", {
+    "holdings": {"SPY": 0.6, "TLT": 0.4},
+    "simulations": 10000,
+    "useMockData": True,
+})
+```
+
+### Run the Demo
+
+```bash
+python examples/langgraph_integration.py
+```
+
+Output:
+```
+============================================================
+QuantRisk MCP - Direct API Demo
+============================================================
+
+1. Health Check:
+   Status: healthy
+   Version: 1.0.0
+
+2. Available Tools:
+   - portfolio_risk
+   - ticker_risk
+   - stress_test
+   - correlation_regime
+
+3. Portfolio Risk Analysis:
+   VaR 95%: 0.30%
+   CVaR 95%: 0.32%
+   Decision: PROCEED
+
+4. Ticker Risk (Adding 15% NVDA):
+   Marginal VaR: 0.45%
+   VaR Contribution: 15.0%
+   Decision: REDUCE
+
+5. Stress Test:
+   Worst Scenario: Global Financial Crisis (2008)
+   Max Drawdown: -28.5%
+   Decision: PROCEED
+
+6. Correlation Regime:
+   Current Regime: normal
+   Avg Correlation: 32.1%
+   Decision: PROCEED
+```
 
 ---
 
