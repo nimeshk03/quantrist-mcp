@@ -7,6 +7,10 @@
 
 import { Env } from './types';
 import { MCPServer } from './mcp/server';
+import {
+  portfolioRiskToolDefinition,
+  portfolioRiskHandler,
+} from './tools/portfolio_risk';
 
 /**
  * Create and configure the MCP server
@@ -15,6 +19,12 @@ const mcpServer = new MCPServer({
   name: 'quantrisk-mcp',
   version: '1.0.0',
   tools: [
+    // Portfolio Risk Tool - Main risk analysis
+    {
+      ...portfolioRiskToolDefinition,
+      handler: portfolioRiskHandler,
+    },
+
     // Echo tool for testing MCP protocol
     {
       name: 'echo',
