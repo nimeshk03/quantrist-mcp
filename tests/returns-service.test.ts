@@ -6,15 +6,18 @@
  * - Asset profile characteristics
  * - Correlation structure
  * - Reproducibility
+ * - Live data integration (with mocked fetch)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   ReturnsService,
   ASSET_PROFILES,
   createMockReturnsService,
+  createLiveReturnsService,
 } from '../src/services/returns';
 import { Statistics } from '../src/utils/statistics';
+import { Env } from '../src/types';
 
 describe('ReturnsService', () => {
   let service: ReturnsService;
@@ -284,6 +287,201 @@ describe('ReturnsService', () => {
       expect(Object.keys(returns)).toHaveLength(10);
       for (const ticker of tickers) {
         expect(returns[ticker]).toHaveLength(50);
+      }
+    });
+  });
+
+  describe('live data service', () => {
+    it('should create live service with factory function', () => {
+      const liveService = createLiveReturnsService({});
+      expect(liveService.hasLiveDataSupport()).toBe(true);
+      expect(liveService.hasCacheSupport()).toBe(false);
+    });
+
+    it('should report cache support when KV is available', () => {
+      const mockKV = {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const env = { RETURNS_CACHE: mockKV } as unknown as Env;
+      const liveService = createLiveReturnsService(env);
+
+      expect(liveService.hasCacheSupport()).toBe(true);
+    });
+
+    it('should fall back to mock data when fetch fails', async () => {
+      // Mock fetch to fail
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      try {
+        const liveService = createLiveReturnsService({}, true);
+        const returns = await liveService.getReturns(['SPY'], 100);
+
+        // Should have fallen back to mock data
+        expect(returns['SPY']).toHaveLength(100);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('should throw error when fallback is disabled and fetch fails', async () => {
+      // Mock fetch to fail
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      try {
+        const liveService = createLiveReturnsService({}, false);
+
+        await expect(liveService.getReturns(['SPY'], 100)).rejects.toThrow(
+          'Network error'
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('should parse Yahoo Finance response correctly', async () => {
+      // Mock successful Yahoo Finance response
+      const mockResponse = {
+        chart: {
+          result: [
+            {
+              meta: { symbol: 'SPY', regularMarketPrice: 450 },
+              timestamp: [1, 2, 3, 4, 5],
+              indicators: {
+                adjclose: [
+                  {
+                    adjclose: [100, 101, 102, 101.5, 103],
+                  },
+                ],
+              },
+            },
+          ],
+          error: null,
+        },
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      try {
+        const liveService = createLiveReturnsService({}, false);
+        const returns = await liveService.getReturns(['SPY'], 4);
+
+        // Should have 4 returns (5 prices = 4 returns)
+        expect(returns['SPY']).toHaveLength(4);
+
+        // Verify return calculations
+        // Return 1: (101 - 100) / 100 = 0.01
+        expect(returns['SPY'][0]).toBeCloseTo(0.01);
+        // Return 2: (102 - 101) / 101 ≈ 0.0099
+        expect(returns['SPY'][1]).toBeCloseTo(0.0099, 3);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('should handle Yahoo Finance API errors', async () => {
+      const mockResponse = {
+        chart: {
+          result: null,
+          error: {
+            code: 'Not Found',
+            description: 'No data found for ticker INVALID',
+          },
+        },
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      try {
+        const liveService = createLiveReturnsService({}, false);
+
+        await expect(liveService.getReturns(['INVALID'], 100)).rejects.toThrow(
+          'No data found'
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('should use cached data when available', async () => {
+      const cachedReturns = [0.01, 0.02, -0.01, 0.015, 0.005];
+
+      const mockKV = {
+        get: vi.fn().mockResolvedValue(JSON.stringify(cachedReturns)),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const env = { RETURNS_CACHE: mockKV } as unknown as Env;
+      const liveService = createLiveReturnsService(env);
+
+      // Should not call fetch since data is cached
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn();
+
+      try {
+        const returns = await liveService.getReturns(['SPY'], 5);
+
+        expect(returns['SPY']).toEqual(cachedReturns);
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(mockKV.get).toHaveBeenCalled();
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('should cache fetched data', async () => {
+      const mockResponse = {
+        chart: {
+          result: [
+            {
+              meta: { symbol: 'SPY', regularMarketPrice: 450 },
+              timestamp: [1, 2, 3],
+              indicators: {
+                adjclose: [{ adjclose: [100, 101, 102] }],
+              },
+            },
+          ],
+          error: null,
+        },
+      };
+
+      const mockKV = {
+        get: vi.fn().mockResolvedValue(null), // Cache miss
+        put: vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn(),
+      };
+
+      const env = { RETURNS_CACHE: mockKV } as unknown as Env;
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      try {
+        const liveService = createLiveReturnsService(env);
+        await liveService.getReturns(['SPY'], 2);
+
+        // Should have called put to cache the result
+        expect(mockKV.put).toHaveBeenCalled();
+        const putCall = mockKV.put.mock.calls[0];
+        expect(putCall[0]).toContain('returns:SPY:2:');
+      } finally {
+        globalThis.fetch = originalFetch;
       }
     });
   });

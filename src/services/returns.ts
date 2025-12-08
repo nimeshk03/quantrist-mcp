@@ -2,11 +2,41 @@
  * Returns Service
  *
  * Provides historical return data for assets.
- * This implementation uses mock data for testing.
- * Milestone 3.2 will add live Yahoo Finance integration.
+ * Supports both mock data (for testing) and live Yahoo Finance data.
+ * Includes KV caching for performance optimization.
  */
 
 import { Env } from '../types';
+
+/**
+ * Cache TTL in seconds (4 hours)
+ * Returns data doesn't change frequently, so we cache aggressively
+ */
+const CACHE_TTL_SECONDS = 4 * 60 * 60;
+
+/**
+ * Yahoo Finance API response structure
+ */
+interface YahooFinanceResponse {
+  chart: {
+    result: Array<{
+      meta: {
+        symbol: string;
+        regularMarketPrice: number;
+      };
+      timestamp: number[];
+      indicators: {
+        adjclose: Array<{
+          adjclose: (number | null)[];
+        }>;
+      };
+    }> | null;
+    error: {
+      code: string;
+      description: string;
+    } | null;
+  };
+}
 
 /**
  * Asset profile defining characteristics for mock data generation
@@ -95,16 +125,30 @@ const SECTOR_CORRELATIONS: Record<string, Record<string, number>> = {
 };
 
 /**
+ * Options for ReturnsService
+ */
+export interface ReturnsServiceOptions {
+  /** Use mock data instead of live API */
+  useMockData?: boolean;
+  /** Random seed for mock data reproducibility */
+  seed?: number;
+  /** Fall back to mock data if live fetch fails */
+  fallbackToMock?: boolean;
+}
+
+/**
  * Returns Service for fetching historical return data
  */
 export class ReturnsService {
   private env: Env;
   private useMockData: boolean;
+  private fallbackToMock: boolean;
   private rngState: number;
 
-  constructor(env: Env, options?: { useMockData?: boolean; seed?: number }) {
+  constructor(env: Env, options?: ReturnsServiceOptions) {
     this.env = env;
-    this.useMockData = options?.useMockData ?? true; // Default to mock for now
+    this.useMockData = options?.useMockData ?? true; // Default to mock for safety
+    this.fallbackToMock = options?.fallbackToMock ?? true;
     this.rngState = options?.seed ?? 42; // Fixed seed for reproducibility
   }
 
@@ -123,8 +167,198 @@ export class ReturnsService {
       return this.generateMockReturns(tickers, lookbackDays);
     }
 
-    // Live data will be implemented in Milestone 3.2
-    throw new Error('Live data not yet implemented. Use mock data.');
+    // Try to fetch live data
+    return this.fetchLiveReturns(tickers, lookbackDays);
+  }
+
+  /**
+   * Fetch live returns from Yahoo Finance with caching
+   */
+  private async fetchLiveReturns(
+    tickers: string[],
+    lookbackDays: number
+  ): Promise<Record<string, number[]>> {
+    const results: Record<string, number[]> = {};
+    const tickersToFetch: string[] = [];
+
+    // Check cache first for each ticker
+    for (const ticker of tickers) {
+      const cached = await this.getCachedReturns(ticker, lookbackDays);
+      if (cached) {
+        results[ticker] = cached;
+      } else {
+        tickersToFetch.push(ticker);
+      }
+    }
+
+    // Fetch remaining tickers from Yahoo Finance
+    for (const ticker of tickersToFetch) {
+      try {
+        const returns = await this.fetchTickerReturns(ticker, lookbackDays);
+        results[ticker] = returns;
+
+        // Cache the result
+        await this.cacheReturns(ticker, lookbackDays, returns);
+      } catch (error) {
+        console.error(`Failed to fetch ${ticker}:`, error);
+
+        // Fall back to mock data if enabled
+        if (this.fallbackToMock) {
+          const mockReturns = this.generateMockReturns([ticker], lookbackDays);
+          results[ticker] = mockReturns[ticker];
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Fetch returns for a single ticker from Yahoo Finance
+   */
+  private async fetchTickerReturns(
+    ticker: string,
+    days: number
+  ): Promise<number[]> {
+    // Calculate date range (add buffer for weekends/holidays)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Math.ceil(days * 1.5) - 10);
+
+    const period1 = Math.floor(startDate.getTime() / 1000);
+    const period2 = Math.floor(endDate.getTime() / 1000);
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${period1}&period2=${period2}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; QuantRiskMCP/1.0)',
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Yahoo Finance API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data: YahooFinanceResponse = await response.json();
+
+    if (data.chart.error) {
+      throw new Error(`Yahoo Finance error: ${data.chart.error.description}`);
+    }
+
+    if (!data.chart.result || data.chart.result.length === 0) {
+      throw new Error(`No data returned for ticker: ${ticker}`);
+    }
+
+    const result = data.chart.result[0];
+    const prices = result.indicators.adjclose[0].adjclose;
+
+    if (!prices || prices.length < 2) {
+      throw new Error(`Insufficient price data for ticker: ${ticker}`);
+    }
+
+    // Calculate daily returns from prices
+    const returns: number[] = [];
+    for (let i = 1; i < prices.length; i++) {
+      const prevPrice = prices[i - 1];
+      const currPrice = prices[i];
+
+      // Skip null values (holidays, missing data)
+      if (prevPrice !== null && currPrice !== null && prevPrice > 0) {
+        returns.push((currPrice - prevPrice) / prevPrice);
+      }
+    }
+
+    // Return the most recent `days` returns
+    return returns.slice(-days);
+  }
+
+  /**
+   * Get cached returns from KV store
+   */
+  private async getCachedReturns(
+    ticker: string,
+    days: number
+  ): Promise<number[] | null> {
+    if (!this.env.RETURNS_CACHE) {
+      return null;
+    }
+
+    try {
+      const cacheKey = this.getCacheKey(ticker, days);
+      const cached = await this.env.RETURNS_CACHE.get(cacheKey);
+
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      console.error(`Cache read error for ${ticker}:`, error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Cache returns in KV store
+   */
+  private async cacheReturns(
+    ticker: string,
+    days: number,
+    returns: number[]
+  ): Promise<void> {
+    if (!this.env.RETURNS_CACHE) {
+      return;
+    }
+
+    try {
+      const cacheKey = this.getCacheKey(ticker, days);
+      await this.env.RETURNS_CACHE.put(cacheKey, JSON.stringify(returns), {
+        expirationTtl: CACHE_TTL_SECONDS,
+      });
+    } catch (error) {
+      console.error(`Cache write error for ${ticker}:`, error);
+    }
+  }
+
+  /**
+   * Generate cache key for ticker/days combination
+   */
+  private getCacheKey(ticker: string, days: number): string {
+    // Include date in key so cache refreshes daily
+    const today = new Date().toISOString().split('T')[0];
+    return `returns:${ticker}:${days}:${today}`;
+  }
+
+  /**
+   * Clear cached returns for a ticker
+   */
+  async clearCache(ticker: string, days?: number): Promise<void> {
+    if (!this.env.RETURNS_CACHE) {
+      return;
+    }
+
+    if (days) {
+      const cacheKey = this.getCacheKey(ticker, days);
+      await this.env.RETURNS_CACHE.delete(cacheKey);
+    }
+    // Note: KV doesn't support prefix deletion, so we can only clear specific keys
+  }
+
+  /**
+   * Check if live data is available (KV cache configured)
+   */
+  hasLiveDataSupport(): boolean {
+    return !this.useMockData;
+  }
+
+  /**
+   * Check if caching is available
+   */
+  hasCacheSupport(): boolean {
+    return !!this.env.RETURNS_CACHE;
   }
 
   /**
@@ -345,4 +579,17 @@ export class ReturnsService {
  */
 export function createMockReturnsService(seed?: number): ReturnsService {
   return new ReturnsService({}, { useMockData: true, seed });
+}
+
+/**
+ * Create a returns service with live Yahoo Finance data
+ *
+ * @param env - Cloudflare Workers environment with optional KV binding
+ * @param fallbackToMock - Whether to fall back to mock data on API errors
+ */
+export function createLiveReturnsService(
+  env: Env,
+  fallbackToMock = true
+): ReturnsService {
+  return new ReturnsService(env, { useMockData: false, fallbackToMock });
 }
