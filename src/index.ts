@@ -15,6 +15,10 @@ import {
   tickerRiskToolDefinition,
   tickerRiskHandler,
 } from './tools/ticker_risk';
+import {
+  stressTestToolDefinition,
+  stressTestHandler,
+} from './tools/stress_test';
 
 /**
  * Create and configure the MCP server
@@ -33,6 +37,12 @@ const mcpServer = new MCPServer({
     {
       ...tickerRiskToolDefinition,
       handler: tickerRiskHandler,
+    },
+
+    // Stress Test Tool - Historical scenario analysis
+    {
+      ...stressTestToolDefinition,
+      handler: stressTestHandler,
     },
 
     // Echo tool for testing MCP protocol
