@@ -275,6 +275,39 @@ VaR Backtest Results
   Status: [OK] PASS
 ```
 
+## Deployment
+
+### Deploy to Cloudflare Workers
+
+```bash
+# Login to Cloudflare (first time only)
+npx wrangler login
+
+# Deploy
+npm run deploy
+```
+
+### Verify Deployment
+
+After deployment, verify the worker is running:
+
+```bash
+# Replace with your actual worker URL
+npm run verify:deployed -- https://quantrisk-mcp.your-subdomain.workers.dev
+```
+
+### Production URL
+
+After deployment, your MCP server will be available at:
+```
+https://quantrisk-mcp.<your-subdomain>.workers.dev
+```
+
+Test the health endpoint:
+```bash
+curl https://quantrisk-mcp.<your-subdomain>.workers.dev/health
+```
+
 ## License
 
 MIT
