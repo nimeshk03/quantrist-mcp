@@ -11,6 +11,10 @@ import {
   portfolioRiskToolDefinition,
   portfolioRiskHandler,
 } from './tools/portfolio_risk';
+import {
+  tickerRiskToolDefinition,
+  tickerRiskHandler,
+} from './tools/ticker_risk';
 
 /**
  * Create and configure the MCP server
@@ -23,6 +27,12 @@ const mcpServer = new MCPServer({
     {
       ...portfolioRiskToolDefinition,
       handler: portfolioRiskHandler,
+    },
+
+    // Ticker Risk Tool - Single ticker analysis
+    {
+      ...tickerRiskToolDefinition,
+      handler: tickerRiskHandler,
     },
 
     // Echo tool for testing MCP protocol
