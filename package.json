@@ -14,6 +14,7 @@
     "backtest": "npx tsx scripts/backtest.ts",
     "verify": "npx tsx scripts/verify-local.ts",
     "verify:deployed": "npx tsx scripts/verify-deployment.ts",
+    "validate:prod": "npx tsx scripts/validate-production.ts",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },

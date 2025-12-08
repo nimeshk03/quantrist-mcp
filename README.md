@@ -308,6 +308,23 @@ Test the health endpoint:
 curl https://quantrisk-mcp.<your-subdomain>.workers.dev/health
 ```
 
+### Production Validation
+
+Run comprehensive production validation with latency checks:
+
+```bash
+npm run validate:prod -- https://quantrisk-mcp.your-subdomain.workers.dev
+```
+
+This tests all 4 tools with multiple scenarios and verifies latency targets:
+
+| Tool | Target | Typical |
+|------|--------|---------|
+| portfolio_risk | <3000ms | ~290ms |
+| ticker_risk | <1000ms | ~220ms |
+| stress_test | <2000ms | ~136ms |
+| correlation_regime | <500ms | ~118ms |
+
 ## License
 
 MIT
