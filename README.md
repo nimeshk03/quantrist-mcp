@@ -171,7 +171,7 @@ npm run build
 
 ## Testing
 
-The project includes a comprehensive test suite with 245+ tests covering all components.
+The project includes a comprehensive test suite with 271 tests covering all components.
 
 ```bash
 # Run all tests
@@ -182,6 +182,9 @@ npm run test:watch
 
 # Run tests with coverage report
 npm run test:coverage
+
+# Run integration tests only
+npm run test:integration
 ```
 
 ### Test Coverage
@@ -210,6 +213,7 @@ npm run test:coverage
 | `ticker-risk.test.ts` | 27 | Ticker risk tool |
 | `stress-test.test.ts` | 30 | Stress test tool |
 | `correlation.test.ts` | 32 | Correlation regime tool |
+| `integration.test.ts` | 26 | End-to-end MCP protocol tests |
 
 ## License
 
